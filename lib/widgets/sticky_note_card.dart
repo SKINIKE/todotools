@@ -5,6 +5,7 @@ import 'package:todotools/providers/sticky_note_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:todotools/widgets/add_sticky_note_dialog.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // 스티커 메모 카드 위젯
 class StickyNoteCard extends ConsumerWidget {
@@ -62,6 +63,7 @@ class StickyNoteCard extends ConsumerWidget {
                 child: Scrollbar(
                   thickness: 3.0,
                   radius: const Radius.circular(2.0),
+                  thumbVisibility: true,
                   child: SingleChildScrollView(
                     physics: const ClampingScrollPhysics(),
                     child: Markdown(
@@ -81,10 +83,17 @@ class StickyNoteCard extends ConsumerWidget {
                           fontSize: 14,
                           fontStyle: FontStyle.italic,
                         ),
+                        a: const TextStyle(
+                          color: Colors.blue,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                       shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(), // 외부 스크롤뷰가 담당하도록 내부 스크롤 비활성화
+                      physics: const NeverScrollableScrollPhysics(),
                       padding: EdgeInsets.zero,
+                      onTapLink: (text, href, title) {
+                        _launchURL(href);
+                      },
                     ),
                   ),
                 ),
@@ -144,6 +153,22 @@ class StickyNoteCard extends ConsumerWidget {
         return Colors.purple.shade100;
       default:
         return Colors.amber.shade100; // 기본값 노란색
+    }
+  }
+
+  // URL 실행 함수
+  void _launchURL(String? url) async {
+    if (url == null || url.isEmpty) return;
+    
+    try {
+      final Uri uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        // 링크를 열 수 없을 때는 조용히 실패
+      }
+    } catch (e) {
+      // URL 파싱 오류도 조용히 처리
     }
   }
 } 
