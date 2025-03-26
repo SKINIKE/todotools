@@ -20,6 +20,7 @@ class _StickyNotesScreenState extends ConsumerState<StickyNotesScreen> with Auto
   final _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   List<dynamic> _notes = [];
+  final GlobalKey _gridViewKey = GlobalKey();
   
   @override
   void initState() {
@@ -189,7 +190,36 @@ void main() {
               },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => Center(
-                child: Text('오류가 발생했습니다: $error'),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                    const SizedBox(height: 16),
+                    const Text(
+                      '스티커 메모를 불러오는데 문제가 발생했습니다',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '에러 내용: $error',
+                      style: const TextStyle(fontSize: 14),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '에러 위치: $stack',
+                      style: const TextStyle(fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () {
+                        ref.refresh(stickyNotesProvider);
+                      },
+                      child: const Text('다시 시도'),
+                    )
+                  ],
+                ),
               ),
             ),
           ),
@@ -204,6 +234,7 @@ void main() {
       scrollController: _scrollController,
       enableDraggable: true,
       enableLongPress: true,
+      enableScrollingWhileDragging: true,
       dragChildBoxDecoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
@@ -215,6 +246,7 @@ void main() {
       ),
       builder: (children) {
         return GridView(
+          key: _gridViewKey,
           controller: _scrollController,
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 3,

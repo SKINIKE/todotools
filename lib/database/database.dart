@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:todotools/database/tables.dart';
+import 'dart:developer' as developer;
 
 part 'database.g.dart';
 
@@ -297,38 +298,95 @@ class AppDatabase extends _$AppDatabase {
   
   // 스티커 메모 관련 메서드들
   // 모든 스티커 메모 가져오기
-  Future<List<StickyNote>> getAllStickyNotes() => 
-    (select(stickyNotes)..orderBy([(t) => OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc)])).get();
+  Future<List<StickyNote>> getAllStickyNotes() async {
+    try {
+      developer.log('모든 스티커 메모 가져오기 시도', name: 'database');
+      final result = await (select(stickyNotes)
+        ..orderBy([(t) => OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc)]))
+        .get();
+      developer.log('스티커 메모 로드 성공: ${result.length}개', name: 'database');
+      return result;
+    } catch (e, stack) {
+      developer.log('스티커 메모 로드 오류: $e', name: 'database', error: e, stackTrace: stack);
+      rethrow;
+    }
+  }
   
   // 스티커 메모 검색
-  Future<List<StickyNote>> searchStickyNotes(String query) {
-    if (query.isEmpty) {
-      return getAllStickyNotes();
+  Future<List<StickyNote>> searchStickyNotes(String query) async {
+    try {
+      developer.log('스티커 메모 검색 시도: $query', name: 'database');
+      
+      if (query.isEmpty) {
+        return getAllStickyNotes();
+      }
+      
+      final result = await (select(stickyNotes)
+        ..where((note) => note.title.like('%$query%') | note.content.like('%$query%'))
+        ..orderBy([(t) => OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc)])
+      ).get();
+      
+      developer.log('스티커 메모 검색 성공: ${result.length}개 결과', name: 'database');
+      return result;
+    } catch (e, stack) {
+      developer.log('스티커 메모 검색 오류: $e', name: 'database', error: e, stackTrace: stack);
+      rethrow;
     }
-    
-    return (select(stickyNotes)
-      ..where((note) => note.title.like('%$query%') | note.content.like('%$query%'))
-      ..orderBy([(t) => OrderingTerm(expression: t.updatedAt, mode: OrderingMode.desc)])
-    ).get();
   }
   
   // 스티커 메모 저장 (새로 추가하거나 업데이트)
-  Future<int> saveStickyNote(StickyNotesCompanion note) => into(stickyNotes).insert(
-    note,
-    mode: InsertMode.insertOrReplace,
-  );
+  Future<int> saveStickyNote(StickyNotesCompanion note) async {
+    try {
+      developer.log('스티커 메모 저장 시도', name: 'database');
+      final result = await into(stickyNotes).insert(
+        note,
+        mode: InsertMode.insertOrReplace,
+      );
+      developer.log('스티커 메모 저장 성공: ID=$result', name: 'database');
+      return result;
+    } catch (e, stack) {
+      developer.log('스티커 메모 저장 오류: $e', name: 'database', error: e, stackTrace: stack);
+      rethrow;
+    }
+  }
   
   // 스티커 메모 삭제
-  Future<int> deleteStickyNote(int id) => 
-    (delete(stickyNotes)..where((t) => t.id.equals(id))).go();
+  Future<int> deleteStickyNote(int id) async {
+    try {
+      developer.log('스티커 메모 삭제 시도: ID=$id', name: 'database');
+      final result = await (delete(stickyNotes)..where((t) => t.id.equals(id))).go();
+      developer.log('스티커 메모 삭제 성공: $result개 항목 삭제됨', name: 'database');
+      return result;
+    } catch (e, stack) {
+      developer.log('스티커 메모 삭제 오류: $e', name: 'database', error: e, stackTrace: stack);
+      rethrow;
+    }
+  }
 }
 
 // 데이터베이스 연결 설정
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
-    // 앱 문서 디렉토리 가져오기
-    final dbFolder = await getApplicationDocumentsDirectory();
-    final file = File(p.join(dbFolder.path, 'todotools.db'));
-    return NativeDatabase(file);
+    try {
+      // 앱 문서 디렉토리 가져오기
+      final dbFolder = await getApplicationDocumentsDirectory();
+      final file = File(p.join(dbFolder.path, 'todotools.db'));
+      
+      developer.log('데이터베이스 연결 시도: ${file.path}', name: 'database');
+      
+      // 경로 디렉토리가 존재하는지 확인하고 없으면 생성
+      if (!await Directory(dbFolder.path).exists()) {
+        await Directory(dbFolder.path).create(recursive: true);
+        developer.log('데이터베이스 디렉토리 생성: ${dbFolder.path}', name: 'database');
+      }
+      
+      // 데이터베이스 연결 반환
+      final db = NativeDatabase(file);
+      developer.log('데이터베이스 연결 성공', name: 'database');
+      return db;
+    } catch (e, stack) {
+      developer.log('데이터베이스 연결 오류: $e', name: 'database', error: e, stackTrace: stack);
+      rethrow;
+    }
   });
 } 
