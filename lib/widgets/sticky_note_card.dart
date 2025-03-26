@@ -59,27 +59,34 @@ class StickyNoteCard extends ConsumerWidget {
               const SizedBox(height: 8),
               // 내용 (마크다운 지원)
               Expanded(
-                child: Markdown(
-                  data: note.content,
-                  styleSheet: MarkdownStyleSheet(
-                    p: const TextStyle(fontSize: 14),
-                    h1: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black.withOpacity(0.8)),
-                    h2: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black.withOpacity(0.8)),
-                    h3: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black.withOpacity(0.8)),
-                    code: TextStyle(
-                      backgroundColor: Colors.grey.shade200,
-                      color: Colors.black87,
-                      fontSize: 13,
-                    ),
-                    blockquote: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontSize: 14,
-                      fontStyle: FontStyle.italic,
+                child: Scrollbar(
+                  thickness: 3.0,
+                  radius: const Radius.circular(2.0),
+                  child: SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    child: Markdown(
+                      data: note.content,
+                      styleSheet: MarkdownStyleSheet(
+                        p: const TextStyle(fontSize: 14),
+                        h1: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black.withOpacity(0.8)),
+                        h2: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.black.withOpacity(0.8)),
+                        h3: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black.withOpacity(0.8)),
+                        code: TextStyle(
+                          backgroundColor: Colors.grey.shade200,
+                          color: Colors.black87,
+                          fontSize: 13,
+                        ),
+                        blockquote: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(), // 외부 스크롤뷰가 담당하도록 내부 스크롤 비활성화
+                      padding: EdgeInsets.zero,
                     ),
                   ),
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero,
                 ),
               ),
               const SizedBox(height: 8),

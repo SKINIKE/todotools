@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:todotools/database/tables.dart';
 import 'package:todotools/providers/sticky_note_provider.dart';
@@ -230,55 +231,31 @@ void main() {
   
   // 드래그 가능한 그리드 뷰 생성
   Widget _buildDraggableGridView() {
-    return ReorderableBuilder(
-      scrollController: _scrollController,
-      enableDraggable: true,
-      enableLongPress: true,
-      enableScrollingWhileDragging: true,
-      dragChildBoxDecoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 8,
-            spreadRadius: 2,
-          ),
-        ],
-      ),
-      builder: (children) {
-        return GridView(
-          key: _gridViewKey,
-          controller: _scrollController,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 1.0,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-          ),
-          children: children,
-        );
-      },
-      children: List.generate(
-        _notes.length,
-        (index) => StickyNoteCard(
-          key: ValueKey(_notes[index].id),
-          note: _notes[index],
-          onTap: () => _showEditNoteDialog(_notes[index]),
+    return Scrollbar(
+      controller: _scrollController,
+      thumbVisibility: true,
+      thickness: 8.0,
+      radius: const Radius.circular(4.0),
+      child: GridView.builder(
+        key: _gridViewKey,
+        controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 16),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          childAspectRatio: 1.0,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
         ),
+        itemCount: _notes.length,
+        itemBuilder: (context, index) {
+          return StickyNoteCard(
+            key: ValueKey(_notes[index].id),
+            note: _notes[index],
+            onTap: () => _showEditNoteDialog(_notes[index]),
+          );
+        },
       ),
-      onReorder: (List<OrderUpdateEntity> orderUpdateEntities) {
-        for (final entity in orderUpdateEntities) {
-          final fromIndex = entity.oldIndex;
-          final toIndex = entity.newIndex;
-          
-          if (fromIndex == toIndex) continue;
-          
-          // 항목 순서 업데이트
-          final item = _notes.removeAt(fromIndex);
-          _notes.insert(toIndex, item);
-        }
-        
-        setState(() {});
-      },
     );
   }
   
