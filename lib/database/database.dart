@@ -6,11 +6,40 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:todotools/database/tables.dart';
 import 'dart:developer' as developer;
+import 'package:shared_preferences/shared_preferences.dart';
 
 part 'database.g.dart';
 
 /// 앱에서 사용할 데이터베이스 클래스
 /// 할일, 뽀모도로 설정, 계산기 히스토리, 스티커 메모를 관리합니다.
+
+// 데이터베이스 저장 위치 설정을 위한 상수
+const String _dbPathKey = 'database_path';
+
+// 데이터베이스 저장 위치를 가져오는 함수 (기본값 또는 사용자 설정값)
+Future<String> getDatabasePath() async {
+  final prefs = await SharedPreferences.getInstance();
+  final customPath = prefs.getString(_dbPathKey);
+
+  if (customPath != null && customPath.isNotEmpty) {
+    developer.log('사용자 지정 DB 경로 사용: $customPath', name: 'database');
+    return customPath;
+  }
+
+  // 기본 경로 사용
+  final dbFolder = await getApplicationDocumentsDirectory();
+  final defaultPath = p.join(dbFolder.path, 'todotools.db');
+  developer.log('기본 DB 경로 사용: $defaultPath', name: 'database');
+  return defaultPath;
+}
+
+// 데이터베이스 저장 위치를 설정하는 함수
+Future<void> setDatabasePath(String path) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString(_dbPathKey, path);
+  developer.log('새 DB 경로 저장: $path', name: 'database');
+}
+
 @DriftDatabase(tables: [Tasks, PomodoroSettings, CalculatorHistory, StickyNotes])
 class AppDatabase extends _$AppDatabase {
   // 싱글톤 인스턴스
@@ -367,26 +396,26 @@ class AppDatabase extends _$AppDatabase {
 // 데이터베이스 연결 설정
 LazyDatabase _openConnection() {
   return LazyDatabase(() async {
+    final dbPath = await getDatabasePath(); // 수정: 사용자 설정 경로 사용
+    final file = File(dbPath);
+
+    developer.log('데이터베이스 연결 시도: ${file.path}', name: 'database');
+
+    // 경로 디렉토리가 존재하는지 확인하고 없으면 생성
+    final dbDir = p.dirname(file.path);
+    if (!await Directory(dbDir).exists()) {
+      await Directory(dbDir).create(recursive: true);
+      developer.log('데이터베이스 디렉토리 생성: $dbDir', name: 'database');
+    }
+
     try {
-      // 앱 문서 디렉토리 가져오기
-      final dbFolder = await getApplicationDocumentsDirectory();
-      final file = File(p.join(dbFolder.path, 'todotools.db'));
-      
-      developer.log('데이터베이스 연결 시도: ${file.path}', name: 'database');
-      
-      // 경로 디렉토리가 존재하는지 확인하고 없으면 생성
-      if (!await Directory(dbFolder.path).exists()) {
-        await Directory(dbFolder.path).create(recursive: true);
-        developer.log('데이터베이스 디렉토리 생성: ${dbFolder.path}', name: 'database');
-      }
-      
-      // 데이터베이스 연결 반환
       final db = NativeDatabase(file);
       developer.log('데이터베이스 연결 성공', name: 'database');
       return db;
     } catch (e, stack) {
       developer.log('데이터베이스 연결 오류: $e', name: 'database', error: e, stackTrace: stack);
-      rethrow;
+      // 오류 발생 시 기본 경로로 재시도 또는 사용자에게 알림 등의 처리 추가 가능
+      rethrow; // 일단 오류 전파
     }
   });
 } 

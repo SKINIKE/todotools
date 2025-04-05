@@ -12,15 +12,9 @@ import 'dart:developer' as developer;
 class AppSettingsScreen extends ConsumerWidget {
   const AppSettingsScreen({super.key});
 
-  // DB 파일 경로 가져오기
+  // DB 파일 경로 가져오기 (database.dart의 함수 사용)
   Future<String> _getDbPath() async {
-    try {
-      final dbFolder = await getApplicationDocumentsDirectory();
-      return p.join(dbFolder.path, 'todotools.db');
-    } catch (e) {
-      developer.log('DB 경로 가져오기 오류: $e', name: 'AppSettingsScreen');
-      return '';
-    }
+    return getDatabasePath(); // 기존 로직 대신 database.dart의 함수 사용
   }
 
   // 데이터 내보내기
@@ -146,28 +140,81 @@ class AppSettingsScreen extends ConsumerWidget {
     }
   }
 
-  // DB 저장 위치 열기 (탐색기)
-  Future<void> _openDbLocation(BuildContext context) async {
+  // DB 저장 위치 변경 다이얼로그
+  Future<void> _showChangeDbLocationDialog(BuildContext context) async {
+    final currentPath = await _getDbPath();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('데이터베이스 저장 위치 변경'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('현재 저장 위치:'),
+            const SizedBox(height: 8),
+            Text(
+              currentPath,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '⚠️ 경고: 저장 위치를 변경하면 앱을 다시 시작해야 적용됩니다. ' 
+              '기존 데이터 백업 후 가져오기 기능을 통해 데이터를 복원할 수 있습니다. ' 
+              '잘못된 경로를 설정하면 데이터가 유실될 수 있습니다.',
+              style: TextStyle(color: Colors.red, fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              Navigator.pop(context); // 먼저 다이얼로그 닫기
+              await _changeDbLocation(context);
+            },
+            child: const Text('위치 변경'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // DB 저장 위치 변경 로직
+  Future<void> _changeDbLocation(BuildContext context) async {
     try {
-      final String dbPath = await _getDbPath();
-      if (dbPath.isEmpty) {
-        _showSnackBar(context, '데이터베이스 경로를 찾을 수 없습니다.');
-        return;
-      }
+      String? selectedDirectory = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: '데이터베이스를 저장할 폴더 선택',
+      );
 
-      final String dbDir = p.dirname(dbPath);
-      final uri = Uri.directory(dbDir);
+      if (selectedDirectory != null) {
+        final newDbPath = p.join(selectedDirectory, 'todotools.db');
+        
+        // 확인 다이얼로그 추가
+        final bool? confirmChange = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('저장 위치 확인'),
+            content: Text('다음 위치에 데이터베이스를 저장하시겠습니까?\n$newDbPath\n\n앱을 재시작해야 변경사항이 적용됩니다.'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('취소')),
+              FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('확인')),
+            ],
+          ),
+        );
 
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri);
-      } else {
-        // 경로를 클립보드에 복사하는 등의 대체 동작
-        // Clipboard.setData(ClipboardData(text: dbDir));
-        _showSnackBar(context, '파일 탐색기를 열 수 없습니다. 경로: $dbDir');
+        if (confirmChange == true) {
+          await setDatabasePath(newDbPath); // database.dart의 함수 사용
+          _showSnackBar(context, '데이터베이스 저장 위치가 변경되었습니다. 앱을 다시 시작하세요.');
+        }
       }
     } catch (e) {
-      developer.log('DB 위치 열기 오류: $e', name: 'AppSettingsScreen');
-      _showSnackBar(context, 'DB 저장 위치를 여는 중 오류가 발생했습니다.');
+      developer.log('DB 위치 변경 오류: $e', name: 'AppSettingsScreen');
+      _showSnackBar(context, 'DB 저장 위치 변경 중 오류가 발생했습니다.');
     }
   }
 
@@ -240,7 +287,7 @@ class AppSettingsScreen extends ConsumerWidget {
           
           const Divider(),
           
-          // 데이터 관리 섹션 추가
+          // 데이터 관리 섹션
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Text(
@@ -253,6 +300,27 @@ class AppSettingsScreen extends ConsumerWidget {
           ),
 
           ListTile(
+            leading: const Icon(Icons.folder_open),
+            title: const Text('데이터베이스 저장 위치'),
+            subtitle: FutureBuilder<String>(
+              future: _getDbPath(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Text('현재 위치 로딩 중...');
+                } else if (snapshot.hasError || snapshot.data == null || snapshot.data!.isEmpty) {
+                  return const Text('현재 위치를 가져올 수 없습니다.');
+                } else {
+                  return Text(snapshot.data!); // 전체 경로 표시
+                }
+              },
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.edit_outlined),
+              tooltip: '저장 위치 변경',
+              onPressed: () => _showChangeDbLocationDialog(context),
+            ),
+          ),
+          ListTile(
             leading: const Icon(Icons.backup_outlined),
             title: const Text('데이터 내보내기 (.db)'),
             subtitle: const Text('현재 데이터를 파일로 백업합니다.'),
@@ -263,23 +331,6 @@ class AppSettingsScreen extends ConsumerWidget {
             title: const Text('데이터 가져오기 (.db)'),
             subtitle: const Text('백업 파일에서 데이터를 복원합니다.'),
             onTap: () => _importData(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.folder_open_outlined),
-            title: const Text('DB 저장 위치 보기'),
-            subtitle: FutureBuilder<String>( // 비동기로 DB 경로 표시
-              future: _getDbPath(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Text('경로 로딩 중...');
-                } else if (snapshot.hasError || snapshot.data == null || snapshot.data!.isEmpty) {
-                  return const Text('경로를 가져올 수 없습니다.');
-                } else {
-                  return Text('탭하여 폴더 열기: ${p.dirname(snapshot.data!)}'); // 디렉토리 경로만 표시
-                }
-              },
-            ),
-            onTap: () => _openDbLocation(context),
           ),
           
           const Divider(),
