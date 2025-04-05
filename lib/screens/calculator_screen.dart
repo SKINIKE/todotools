@@ -490,7 +490,7 @@ class _CalculatorScreenState extends ConsumerState<CalculatorScreen> {
                             Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Text(
-                                "중요한 계산은 타 프로그램을 사용해주세요",
+                                "오류가 있을 수 있습니다. 중요한 계산은 타 프로그램을 사용해주세요",
                                 style: TextStyle(
                                   color: Theme.of(context).colorScheme.error,
                                   fontSize: 12,
