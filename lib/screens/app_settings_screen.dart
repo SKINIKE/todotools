@@ -59,6 +59,63 @@ class AppSettingsScreen extends ConsumerWidget {
   // 데이터 가져오기
   Future<void> _importData(BuildContext context) async {
     try {
+      // 경고 다이얼로그 표시
+      final bool? confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.warning_amber_rounded, color: Colors.red),
+              const SizedBox(width: 8),
+              const Text('데이터 가져오기'),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '⚠️ 이 작업은 되돌릴 수 없습니다!',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text('다음 데이터가 영구적으로 삭제됩니다:'),
+              const SizedBox(height: 8),
+              const Text('• 모든 뽀모도로 타이머 설정'),
+              const Text('• 모든 작업 목록'),
+              const Text('• 모든 계산기 기록'),
+              const Text('• 모든 스티커 메모'),
+              const SizedBox(height: 16),
+              const Text(
+                '정말로 백업 파일로 데이터를 가져오시겠습니까?',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('가져오기'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) {
+        return;
+      }
+
       // 사용자에게 가져올 DB 파일 선택 받기
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
@@ -81,13 +138,7 @@ class AppSettingsScreen extends ConsumerWidget {
         final importFile = File(importFilePath);
         await importFile.copy(targetDbPath);
 
-        // AppDatabase 인스턴스 재초기화 (팩토리 생성자 호출 시 내부적으로 처리됨)
-        // AppDatabase(); // 또는 명시적으로 재연결 로직 필요 시 구현
-
-        _showSnackBar(context, '데이터를 성공적으로 가져왔습니다. 앱을 다시 시작해주세요.');
-        // 앱 재시작 또는 데이터 리로딩 로직 필요
-        // 예: Navigator.pushAndRemoveUntil or SystemNavigator.pop() 등 고려
-
+        _showSnackBar(context, '데이터를 성공적으로 가져왔습니다. 앱을 다시 시작해주세요.(필수)');
       }
     } catch (e) {
       developer.log('데이터 가져오기 오류: $e', name: 'AppSettingsScreen');
