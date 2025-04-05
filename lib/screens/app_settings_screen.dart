@@ -225,6 +225,46 @@ class AppSettingsScreen extends ConsumerWidget {
     );
   }
 
+  // 자동 시작 안내 다이얼로그 표시
+  void _showAutoStartHelpDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Windows 시작 시 자동 실행 방법'),
+        content: SingleChildScrollView(
+          child: ListBody(
+            children: <Widget>[
+              const Text('이 앱을 Windows 시작 시 자동으로 실행하려면 다음 단계를 따르세요:'),
+              const SizedBox(height: 16),
+              const Text('1. 실행 창 열기:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text("   키보드에서 'Win' 키 + 'R' 키를 동시에 누릅니다."),
+              const SizedBox(height: 8),
+              const Text('2. 시작프로그램 폴더 열기:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text("   실행 창에 'shell:startup'을 입력하고 Enter 키를 누릅니다."),
+              const SizedBox(height: 8),
+              const Text('3. 바로 가기 만들기:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('   바탕 화면이나 설치된 폴더에서 TodoTools 실행 파일(.exe)을 찾습니다.'),
+              const Text('   실행 파일을 마우스 오른쪽 버튼으로 클릭하고 "바로 가기 만들기"를 선택합니다.'),
+              const SizedBox(height: 8),
+              const Text('4. 바로 가기 이동:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('   만들어진 바로 가기 파일을 2단계에서 열었던 시작프로그램 폴더로 복사하거나 이동합니다.'),
+              const SizedBox(height: 16),
+              const Text('이제 다음에 Windows를 시작할 때 앱이 자동으로 실행됩니다.'),
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            child: const Text('닫기'),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // 현재 테마 모드
@@ -283,6 +323,32 @@ class AppSettingsScreen extends ConsumerWidget {
             onChanged: (value) {
               ref.read(themeProvider.notifier).setThemeMode(ThemeMode.dark);
             },
+          ),
+          
+          const Divider(),
+          
+          // 시스템 설정 섹션
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text(
+              '시스템',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+
+          // Windows 시작 시 자동 실행 안내 타일
+          ListTile(
+            leading: const Icon(Icons.power_settings_new),
+            title: const Text('Windows 시작 시 자동 실행'),
+            subtitle: const Text('자동 실행 설정 방법 안내'),
+            trailing: IconButton(
+              icon: const Icon(Icons.help_outline),
+              tooltip: '자동 실행 방법 보기',
+              onPressed: () => _showAutoStartHelpDialog(context),
+            ),
           ),
           
           const Divider(),
